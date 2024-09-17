@@ -8,7 +8,7 @@ import {
 } from "react";
 
 // Define the Document type for users
-type Document = {
+export type Document = {
   $id: string;
   $collectionId: string;
   $databaseId: string;
