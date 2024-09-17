@@ -138,3 +138,15 @@ export const getLatestPosts = async () => {
     throw new Error(error instanceof Error ? error.message : String(error));
   }
 };
+
+export const searchPosts = async (query: string) => {
+  try {
+    const posts = await databases.listDocuments(databaseId, videoCollectionId, [
+      Query.search("title", query),
+    ]);
+    return posts.documents;
+  } catch (error) {
+    console.log(error);
+    throw new Error(error instanceof Error ? error.message : String(error));
+  }
+};
