@@ -8,8 +8,11 @@ import EmptyState from "@/components/empty-state";
 import { getAllPosts, getLatestPosts } from "@/lib/appwrite";
 import useAppWrite from "@/lib/use-appwrite";
 import VideoCard from "@/components/video-card";
+import { useGlobalContext } from "@/context/global-provider";
 
 const Home = () => {
+  const { user, setUser, setIsLoggedIn } = useGlobalContext();
+
   const { data: posts, refetch } = useAppWrite(getAllPosts);
   const { data: latestPosts } = useAppWrite(getLatestPosts);
 
@@ -34,7 +37,7 @@ const Home = () => {
                   Welcome Back
                 </Text>
                 <Text className="text-xl font-psemibold text-white">
-                  JSMastery
+                  {user?.username}
                 </Text>
               </View>
               <View className="mt-1.5">
