@@ -1,8 +1,4 @@
-import {
-  View,
-  Text,
-  FlatList,
-} from "react-native";
+import { View, Text, FlatList } from "react-native";
 import { useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SearchInput from "@/components/search-input";
@@ -45,6 +41,8 @@ const Search = () => {
         )}
         ListEmptyComponent={() => (
           <EmptyState
+            buttonTitle="Create Video"
+            route="/create"
             title="No videos found"
             subtitle="No videos found for this search query"
           />

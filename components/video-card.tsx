@@ -1,18 +1,25 @@
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import React, { useState } from "react";
 import { icons } from "@/constants";
-import { Document } from "@/context/global-provider";
+import { Document, useGlobalContext } from "@/context/global-provider";
 import { Video, ResizeMode } from "expo-av";
+import { createBookmark } from "@/lib/appwrite";
 
 const VideoCard = ({
   video: {
+    $id,
     title,
     thumbnail,
     video,
     creator: { username, avatar },
   },
 }: Partial<Document>) => {
+  const { user } = useGlobalContext();
   const [play, setPlay] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const bookmark = async () => {
+    await createBookmark(user?.$id!, $id);
+  };
 
   return (
     <View className="flex-col items-center px-4 mb-14">
@@ -42,8 +49,29 @@ const VideoCard = ({
           </View>
         </View>
 
-        <View className="pt-2">
-          <Image source={icons.menu} className="w-5 h-5" resizeMode="contain" />
+        <View className="pt-2 relative">
+          <TouchableOpacity onPress={() => setIsVisible(!isVisible)}>
+            <Image
+              source={icons.menu}
+              className="w-5 h-5"
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+          {isVisible && (
+            <View className="absolute top-10 -left-24 bg-white rounded-lg w-[100px] py-3 px-2 z-50">
+              <TouchableOpacity
+                className="flex-row items-center justify-between"
+                onPress={bookmark}
+              >
+                <Text className="text-xs font-plight">Bookmark</Text>
+                <Image
+                  source={icons.bookmark}
+                  className="w-4 h-4"
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
 

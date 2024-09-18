@@ -1,3 +1,5 @@
+import { FormProps } from "@/app/(tabs)/create";
+import { ImagePickerAsset } from "expo-image-picker";
 import {
   Account,
   Avatars,
@@ -5,6 +7,7 @@ import {
   Databases,
   ID,
   Query,
+  Storage,
 } from "react-native-appwrite";
 
 export const config = {
@@ -14,6 +17,7 @@ export const config = {
   databaseId: "66e8da08002265b0c988",
   userCollectionId: "66e8da210004f1ea1725",
   videoCollectionId: "66e8da3b000050264c23",
+  bookmarkCollectionId: "66ea73ec001eae6a440f",
   storageId: "66e8db8b00326fe1535c",
 };
 
@@ -24,6 +28,7 @@ const {
   databaseId,
   userCollectionId,
   videoCollectionId,
+  bookmarkCollectionId,
   storageId,
 } = config;
 
@@ -34,6 +39,7 @@ client.setEndpoint(endpoint).setProject(project).setPlatform(platform);
 const account = new Account(client);
 const avatars = new Avatars(client);
 const databases = new Databases(client);
+const storage = new Storage(client);
 
 export const createUser = async ({
   username,
@@ -118,7 +124,9 @@ export const getCurrentUser = async () => {
 
 export const getAllPosts = async () => {
   try {
-    const posts = await databases.listDocuments(databaseId, videoCollectionId);
+    const posts = await databases.listDocuments(databaseId, videoCollectionId, [
+      Query.orderDesc("$createdAt"),
+    ]);
     return posts.documents;
   } catch (error) {
     console.log(error);
@@ -163,10 +171,131 @@ export const getUserPosts = async (userId: string) => {
   }
 };
 
+export const getBookmarkPosts = async (userId: string) => {
+  try {
+    const bookmarks = await databases.listDocuments(
+      databaseId,
+      bookmarkCollectionId,
+      [Query.equal("userId", userId)]
+    );
+
+    const videoIds = bookmarks.documents.map((e) => e.videoId);
+    if (videoIds.length > 0) {
+      const posts = await databases.listDocuments(
+        databaseId,
+        videoCollectionId,
+        [Query.equal("$id", videoIds)]
+      );
+      return posts.documents;
+    }
+    return [];
+  } catch (error) {
+    console.log(error);
+    throw new Error(error instanceof Error ? error.message : String(error));
+  }
+};
+
+export const createBookmark = async (userId: string, videoId: string) => {
+  try {
+    const newBookmark = await databases.createDocument(
+      databaseId,
+      bookmarkCollectionId,
+      ID.unique(),
+      {
+        userId,
+        videoId,
+      }
+    );
+
+    return newBookmark;
+  } catch (error) {
+    console.log(error);
+    throw new Error(error instanceof Error ? error.message : String(error));
+  }
+};
+
 export const signOut = async () => {
   try {
     const session = await account.deleteSession("current");
     return session;
+  } catch (error) {
+    console.log(error);
+    throw new Error(error instanceof Error ? error.message : String(error));
+  }
+};
+
+export const getFilePreview = async (fileId: string, type: string) => {
+  let fileUrl;
+
+  try {
+    if (type === "video") {
+      fileUrl = storage.getFileView(storageId, fileId);
+    } else if (type === "image") {
+      fileUrl = storage.getFilePreview(
+        storageId,
+        fileId,
+        2000,
+        2000,
+        "top",
+        100
+      );
+    } else {
+      throw new Error("Invalid file type");
+    }
+
+    if (!fileUrl) throw Error;
+
+    return fileUrl;
+  } catch (error) {
+    console.log(error);
+    throw new Error(error instanceof Error ? error.message : String(error));
+  }
+};
+
+export const uploadFile = async (file: ImagePickerAsset, type: string) => {
+  if (!file) return;
+  const asset = {
+    name: file.fileName!,
+    type: file.mimeType!,
+    size: file.fileSize!,
+    uri: file.uri!,
+  };
+
+  try {
+    const uploadedFile = await storage.createFile(
+      storageId,
+      ID.unique(),
+      asset
+    );
+    const fileUrl = await getFilePreview(uploadedFile.$id, type);
+    return fileUrl;
+  } catch (error) {
+    console.log(error);
+    throw new Error(error instanceof Error ? error.message : String(error));
+  }
+};
+
+export const createVideo = async (form: FormProps & { userId: string }) => {
+  try {
+    const [thumbnailUrl, videoUrl] = await Promise.all([
+      uploadFile(form.thumbnail!, "image"),
+      uploadFile(form.video!, "video"),
+    ]);
+
+    const newPost = await databases.createDocument(
+      databaseId,
+      videoCollectionId,
+      ID.unique(),
+      {
+        title: form.title,
+        thumbnail: thumbnailUrl,
+        video: videoUrl,
+        prompt: form.prompt,
+        creator: form.userId,
+      }
+    );
+
+    return newPost;
   } catch (error) {
     console.log(error);
     throw new Error(error instanceof Error ? error.message : String(error));
